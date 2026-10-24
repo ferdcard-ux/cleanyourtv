@@ -22,6 +22,73 @@
             android:textSize="34sp" />
 
         <TextView
+            style="@style/SettingsLabel"
+            android:text="@string/theme_label" />
+
+        <LinearLayout
+            android:id="@+id/themeChoices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <TextView android:id="@+id/themeOriginal" style="@style/SettingsColumnChoice" android:text="@string/theme_original" />
+            <TextView android:id="@+id/themeAurora" style="@style/SettingsColumnChoice" android:text="@string/theme_aurora" />
+            <TextView android:id="@+id/themeSixColumns" style="@style/SettingsColumnChoice" android:text="@string/theme_six_columns" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/SettingsHint"
+            android:text="@string/theme_hint" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:text="@string/background_label" />
+
+        <!-- Colour swatches, added in LauncherSettingsActivity. -->
+        <LinearLayout
+            android:id="@+id/backgroundChoices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:text="@string/wallpaper_label" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <TextView android:id="@+id/wallpaperTheme" style="@style/SettingsColumnChoice" android:text="@string/wallpaper_theme" />
+            <TextView android:id="@+id/wallpaperNone" style="@style/SettingsColumnChoice" android:text="@string/wallpaper_none" />
+            <TextView android:id="@+id/wallpaperCustom" style="@style/SettingsColumnChoice" android:text="@string/wallpaper_custom" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/SettingsHint"
+            android:text="@string/wallpaper_hint" />
+
+        <TextView
+            style="@style/SettingsLabel"
+            android:text="@string/sky_label" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <TextView android:id="@+id/skyOff" style="@style/SettingsColumnChoice" android:text="@string/off" />
+            <TextView android:id="@+id/skySoft" style="@style/SettingsColumnChoice" android:text="@string/sky_soft" />
+            <TextView android:id="@+id/skyMedium" style="@style/SettingsColumnChoice" android:text="@string/sky_medium" />
+            <TextView android:id="@+id/skyStrong" style="@style/SettingsColumnChoice" android:text="@string/sky_strong" />
+        </LinearLayout>
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
@@ -58,6 +125,26 @@
             android:text="@string/advanced_effects_warning"
             android:textColor="#FFACB8C1"
             android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/statsChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="18dp" />
+
+        <TextView
+            android:id="@+id/libraryChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp" />
+
+        <TextView
+            android:id="@+id/reorderChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp"
+            android:text="@string/reorder" />
+
+        <TextView
+            style="@style/SettingsHint"
+            android:text="@string/reorder_settings_hint" />
 
         <TextView
             android:id="@+id/followThemeChoice"

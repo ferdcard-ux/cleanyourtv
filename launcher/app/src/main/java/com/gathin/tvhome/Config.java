@@ -32,8 +32,15 @@ final class Config {
     static final String FILE_NAME = "config.json";
     static final String WALLPAPER_NAME = "wallpaper.jpg";
     static final String SETTINGS_NAME = "launcher_settings";
-    private static final String THEME_REVISION_NAME = "theme_revision";
+    static final String THEME_REVISION_NAME = "theme_revision";
     private static final String THEME_SIGNATURE_KEY = "theme_signature";
+    /** A picture chosen in Launcher settings, kept in the private files so a theme push never replaces it. */
+    static final String CUSTOM_WALLPAPER_NAME = "custom_wallpaper.jpg";
+    /** On-TV choices (launcher_settings preferences) that override the theme until Follow theme or a theme change. */
+    static final String[] ON_TV_KEYS = {"columns", "animations", "advanced_effects", "background_color",
+            "sky_intensity", "show_stats", "app_library", "wallpaper_mode"};
+    /** The built-in theme last applied from Launcher settings; cleared when another theme arrives. */
+    static final String APPLIED_THEME_KEY = "applied_theme";
 
     final List<String> dockApps;
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock); on by default, false leaves the slots empty. */
@@ -192,10 +199,21 @@ final class Config {
         if (chosenColumns >= 4 && chosenColumns <= 7) columns = chosenColumns;
         animations = choices.getBoolean("animations", animations);
         advancedEffects = choices.getBoolean("advanced_effects", advancedEffects);
+        if (choices.contains("background_color")) background = choices.getInt("background_color", background) | 0xFF000000;
+        skyIntensity = choices.getInt("sky_intensity", skyIntensity);
+        showStats = choices.getBoolean("show_stats", showStats);
+        library = choices.getBoolean("app_library", library);
         File wallpaper = dir != null ? new File(dir, WALLPAPER_NAME) : null;
         if (wallpaper != null && !(wallpaper.isFile() && wallpaper.length() > 0)) wallpaper = null;
         // A theme can also switch the wallpaper off while the file is still there.
         if (json != null && json.has("wallpaper") && !bool(json, "wallpaper", true)) wallpaper = null;
+        String wallpaperMode = choices.getString("wallpaper_mode", "");
+        if ("none".equals(wallpaperMode)) {
+            wallpaper = null;
+        } else if ("custom".equals(wallpaperMode)) {
+            File custom = customWallpaper(ctx);
+            if (custom.isFile() && custom.length() > 0) wallpaper = custom;
+        }
         // A festive skin comes only from a theme; config.xml has no festival.
         Festival festival = json == null ? Festival.NONE : Festival.parse(string(json, "festival", ""),
                 string(json, "festival_until", ""), string(json, "greeting", ""), string(json, "accent_color", ""));
@@ -207,6 +225,21 @@ final class Config {
                 festival);
     }
 
+    static File customWallpaper(Context ctx) {
+        return new File(ctx.getFilesDir(), CUSTOM_WALLPAPER_NAME);
+    }
+
+    /** Removes every on-TV choice from the editor, so the theme (or config.xml) decides again. */
+    static SharedPreferences.Editor clearOnTvChoices(SharedPreferences.Editor editor) {
+        for (String key : ON_TV_KEYS) editor.remove(key);
+        return editor;
+    }
+
+    static boolean hasOnTvChoices(SharedPreferences choices) {
+        for (String key : ON_TV_KEYS) if (choices.contains(key)) return true;
+        return false;
+    }
+
     private static void syncThemeChoices(SharedPreferences choices, File dir, File config) {
         File revision = dir == null ? null : new File(dir, THEME_REVISION_NAME);
         String token = revisionToken(revision);
@@ -216,11 +249,10 @@ final class Config {
             // Existing preferences survive an app upgrade, unless the first launch follows an
             // explicit theme push or reset by the updated tools.
             SharedPreferences.Editor editor = choices.edit();
-            if (!"absent".equals(token)) editor.remove("columns").remove("animations")
-                    .remove("advanced_effects");
+            if (!"absent".equals(token)) clearOnTvChoices(editor).remove(APPLIED_THEME_KEY);
             editor.putString(THEME_SIGNATURE_KEY, signature).commit();
         } else if (!seen.equals(signature)) {
-            choices.edit().remove("columns").remove("animations").remove("advanced_effects")
+            clearOnTvChoices(choices.edit()).remove(APPLIED_THEME_KEY)
                     .putString(THEME_SIGNATURE_KEY, signature).commit();
         }
     }

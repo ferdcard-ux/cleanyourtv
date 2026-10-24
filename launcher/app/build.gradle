@@ -31,6 +31,17 @@ android {
     }
 }
 
+// Themes Launcher settings can apply on the TV: copies of folders in the repo's themes/, packed as assets/themes.
+def builtInThemesDir = "$buildDir/generated/builtInThemes"
+tasks.register('copyBuiltInThemes', Copy) {
+    from(file('../../themes')) {
+        include 'aurora/**', 'six-columns/**'
+    }
+    into "$builtInThemesDir/themes"
+}
+android.sourceSets.main.assets.srcDir builtInThemesDir
+preBuild.dependsOn 'copyBuiltInThemes'
+
 dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'

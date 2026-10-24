@@ -158,6 +158,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean promptsPaused;
     /** Rebuild the tiles on resume: Home was fully hidden by an app, or Home was pressed. Not after a side panel such as Wi-Fi settings. */
     private boolean rebuildOnResume = true;
+    private static final String STATE_REORDER_AFTER_SETTINGS = "reorder_after_settings";
+    /** Reorder apps was chosen in Launcher settings: start reorder mode on the next resume. */
+    private boolean reorderAfterSettings;
     /** The Inputs or Module cards dropdown while one is open, so onPause can close it. */
     private PopupWindow openPopup;
     /** Reorder mode is on (top-bar button). */
@@ -236,6 +239,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        reorderAfterSettings = savedInstanceState != null
+                && savedInstanceState.getBoolean(STATE_REORDER_AFTER_SETTINGS, false);
         setContentView(R.layout.activity_main);
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
@@ -574,6 +579,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             reloadApps(true);
         }
         rebuildOnResume = false;
+        if (reorderAfterSettings) {
+            reorderAfterSettings = false;
+            // After the tiles' own focus post, so reorder mode starts on tiles that are in place.
+            grid.post(() -> {
+                if (!reordering && !isFinishing()) toggleReorder();
+            });
+        }
         updateGreeting();
         updateWifiLabel();
         updateInputsButton();
@@ -593,7 +605,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) recreate();
+        if (requestCode != LAUNCHER_SETTINGS_REQUEST) return;
+        reorderAfterSettings = data != null && data.getBooleanExtra(LauncherSettingsActivity.EXTRA_REORDER, false);
+        if (resultCode == RESULT_OK) recreate();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        // recreate() after Launcher settings: the new instance still opens reorder mode if it was asked for.
+        outState.putBoolean(STATE_REORDER_AFTER_SETTINGS, reorderAfterSettings);
     }
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
