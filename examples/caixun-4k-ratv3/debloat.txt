@@ -1,0 +1,63 @@
+# Caixun Sgamer (device cottongreen, product Caixun_4K_RATV3, made by Expressluck), Google TV on Android 14,
+# firmware UKRC.260302.020. Realtek RTD2885N SoC, RTD6748 platform, about 1.7 GB RAM, Latin America.
+# Same platform as examples/kalley-r10g/ and examples/prismplus-q65-ultra-r10g/; same ODM as examples/aipro2k/.
+#
+# Apply:   TV_HOST=<tv ip> tools/disable.sh examples/caixun-4k-ratv3/debloat.txt
+# Undo:    TV_HOST=<tv ip> tools/restore.sh examples/caixun-4k-ratv3/debloat.txt com.google.android.apps.tv.launcherx
+# Everything is DISABLED, not uninstalled. Comment out any line you want to keep.
+#
+# Stock launcher: com.google.android.apps.tv.launcherx (pass it to restore.sh).
+# Connection: this set came up on Wireless debugging (_adb-tls-connect._tcp). Run `adb tcpip 5555` first,
+# since tools/tv.py talks to port 5555, and close the port again when done.
+# Language: the set runs in es-ES (persist.sys.locale); nothing here touches it, and the launcher follows it.
+# Inputs: com.android.tv.action.VIEW_INPUTS resolves to com.google.android.tv.inputplayer/.switcher.SelectInputActivity.
+# Input button: the "Smart GTV-R Remote" sends KEYCODE_TV_INPUT (HID usage 0x0C01BB), not KEYCODE_TV, so the
+# launcher's InputKeyService does not help; leave it off (-InputKeyService), since while it filters keys a held
+# key no longer repeats (held volume moved one step). com.realtek.tv answers the button by broadcasting to
+# launcherx's GlobalButtonLaunch_Receiver, so with launcherx disabled the button does nothing: use Inputs on Home.
+# Re-enabling launcherx brings the button back but takes Home over again (priority 2 against 0), and shell
+# cannot disable only its HomeActivity.
+#
+# Already disabled from the factory (do not re-enable them on restore): com.google.android.play.games,
+# com.google.android.youtube.tvmusic.
+#
+# Built on 2026-10-24 from the Kalley R10G list and the packages on this set. NOT YET TESTED on the TV.
+
+# Content recognition (ACR: reports what is on screen) and retail demo
+tv.anoki.acr.anokiacroptin                   # Anoki ACR, /system/priv-app/AnokiAcrOptin
+com.realtek.retailmode                       # store demo mode
+
+# Google partner setup and feedback
+com.google.android.partnersetup
+com.google.android.feedback                  # "Send feedback" reports to Google
+
+# Preloaded services
+com.seraphic.hbbtv.app                       # HbbTV red-button overlays on broadcast TV; keep if you use them
+
+# Stock home: not listed. launcher/build-and-install.ps1 disables launcherx itself, and only after the
+# new launcher has started (it puts launcherx back if Home does not end up on the new launcher).
+#
+# Google TV setup wizard: its RecoveryActivity claimed Home as soon as launcherx was off (as on the
+# Kalley R10G), so it has to go too. Android deletes the saved Wi-Fi networks it owns when it is disabled.
+# Check `dumpsys wifi` first: on this set it owned only an old network, not the one in use, so the list was
+# applied with FORCE_SETUPWRAITH=1. If it owns the network you are on, forget that network and join it
+# again in Settings > Network & Internet before disabling it.
+com.google.android.tungsten.setupwraith
+
+# Installed by the user, not preloaded: left alone. Uncomment to disable.
+# com.amazon.amazonvideo.livingroom          # Prime Video
+# com.iqiyi.i18n.tv                          # iQIYI
+# com.viki.android                           # Viki
+# com.tcl.browser                            # TCL browser
+
+# Optional, left enabled:
+# com.google.android.apps.tv.dreamx          # Google TV ambient screensaver; the new launcher has its own Clock one
+# com.rtk.mediabrowser                       # USB media player
+# com.realtek.kara                           # Karaoke, kept by choice
+# com.realtek.karaoke.userguide
+
+# KEEP: com.realtek.dtv, com.realtek.tv, com.realtek.tv.atv, com.google.android.tv.inputplayer (HDMI and inputs),
+#       com.realsil.ota (remote updates), com.google.android.katniss (voice), com.google.android.apps.mediashell
+#       (Chromecast), com.google.android.tv.remote.service (phone remote), com.realtek.keyintercept.epl and
+#       com.realtek.globalkeyhandler (remote buttons, inferred from the names), com.expressluck.tvfactory and
+#       com.realtek.tv110factorytools (factory menus; not worth the risk).
