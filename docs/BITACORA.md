@@ -352,6 +352,91 @@ Con el control «Smart GTV-R Remote» (Bluetooth), mantener pulsado Volumen + o 
 
 ---
 
+## 7. Cambio de Home: de CleanYourTV a Free My TV
+
+Tipo: decisión técnica + registro de verificación. Fecha: 2026-10-24.
+
+### Problema
+El propietario quiso comparar CleanYourTV con [Free My TV](https://github.com/simbasjungles/free-my-tv) (MIT, `io.freemytv`, rama principal en `f2d984c`), un Home de contenido para Google TV, LG y Samsung. Free My TV muestra recomendaciones de TMDB de las apps instaladas, una barra de apps de cristal, el tiempo, modo claro u oscuro según la hora y un salvapantallas con pósteres.
+
+### Hallazgo (lectura del código antes de instalar)
+- **Mecanismo:** Free My TV hace los cambios con su propio cliente ADB contra `127.0.0.1:5555` (`Adb.java`), con una clave que el usuario autoriza en el TV. Cambia de Home con `cmd package set-home-activity` y de salvapantallas con `settings put secure screensaver_components`, y desactiva paquetes con `pm disable-user`.
+- **Qué desactiva** (`HomeMode.targets()`): el Home y el salvapantallas que haya en ese momento, `setupwraith` y su lista `DEBLOAT`. En este TV, de esa lista solo había `tv.anoki.acr.anokiacroptin`, Play Juegos y YouTube Music, todos ya desactivados.
+- **Qué guarda como «original»** (`originalHome`): el Home activo en el momento del cambio, aquí **CleanYourTV**. Los paquetes que ya estaban desactivados quedan en `keptOff` y no se reactivan al volver, así que `setupwraith` no recupera el Home.
+- **Riesgo conocido:** en este TV el puerto 5555 **se cierra en cada reinicio**. Mientras esté cerrado, el botón «Original», el watchdog y la revisión de arranque de Free My TV no pueden actuar; hay que volver a ejecutar `adb tcpip 5555` desde el PC. El Home elegido se conserva tras reiniciar.
+
+### Decisión / Receta
+1. **Respaldo:** Home, salvapantallas, paquetes desactivados y servicios de accesibilidad, en `C:\Users\migue\.cleanyourtv\backup-before-freemytv-20261024\`.
+2. **Configuración:** clon en `C:\Users\migue\DEV\free-my-tv`, con `config.properties` así: `city=Barranquilla`, `latitude=10.9685`, `longitude=-74.7813`, `tmdb_region=CO`, `show_crypto=false` y la clave TMDB del propietario. Ese archivo está en `.gitignore`.
+3. **Compilación:** `./build.sh` (Git Bash, `JAVA_HOME` = Temurin 21, `ANDROID_HOME` = SDK local) genera `FreeMyTV.apk` (1,4 MB), firmado con `freemytv.keystore`. Hay que conservar esa clave para instalar actualizaciones.
+4. **Instalación:** `adb tcpip 5555` → `adb connect 192.168.1.13:5555` → `adb install -r FreeMyTV.apk` (`Success`, sin aviso de Play Protect). Después, `adb disconnect 192.168.1.13:5555`, para que el permiso «¿Permitir depuración USB?» quede para la clave de Free My TV.
+5. **Activación:** el propietario lo hizo en el TV: Free My TV → Pantalla de inicio → **Free My TV**, y aceptó el permiso de depuración.
+
+### Verificación en hardware
+- **Home:** `io.freemytv/.HomeActivity`; el botón Home lo abre.
+- **Salvapantallas:** `io.freemytv/io.freemytv.Screensaver`.
+- **Paquetes nuevos desactivados:** solo `com.gathin.tvhome` (CleanYourTV) y `com.google.android.apps.tv.dreamx`. Los demás ya lo estaban.
+- **Accesibilidad:** sin servicios de accesibilidad (`enabled_accessibility_services` vacío), así que la repetición de teclas mantenidas (entrada 6) no se ve afectada.
+- **Pantalla «Para ti»:** en español, recomendaciones de TMDB para Colombia (por ejemplo «Masterplan», de Prime Video). La barra de apps tiene Netflix, YouTube, Prime Video, HBO Max y Spotify, y se ve en modo claro de día.
+- **Shizuku:** `shizuku_server` sigue en marcha.
+- **Valoración del propietario:** le gustó el resultado y se queda con Free My TV.
+
+### No verificado / atajos de prueba
+- Sin probar tras reiniciar: el botón Entradas de Free My TV, abrir una recomendación, el salvapantallas y el modo noche.
+- Sin medir: la memoria con Free My TV en este TV de 1,7 GB. La entrada 5.2 registra cierres por falta de memoria al arrancar.
+- El botón Input del control sigue sin efecto: depende de `launcherx` (entrada 6), que sigue desactivado.
+
+### Cambios residuales en el entorno
+| Cambio | Cómo revertirlo |
+|---|---|
+| Home y salvapantallas en Free My TV; CleanYourTV y `dreamx` desactivados | En el TV: Free My TV → Pantalla de inicio → **Original** (con el puerto 5555 abierto). Desde el PC: `pm enable com.gathin.tvhome`, `pm enable com.google.android.apps.tv.dreamx`, `cmd package set-home-activity com.gathin.tvhome/.MainActivity`, `settings put secure screensaver_components com.google.android.apps.tv.dreamx/.service.Backdrop` y desinstalar `io.freemytv` |
+| **Puerto ADB 5555 abierto sin cifrar** | Se cierra al reiniciar el TV; para que el botón «Original» vuelva a funcionar hay que abrirlo con `adb tcpip 5555` |
+| Clave ADB de Free My TV autorizada en el TV | Se revoca en Opciones para desarrolladores → Revocar autorizaciones de depuración USB (también revoca la del PC) |
+
+### Corrige
+- Corrige a la entrada 4, «Verificación en hardware»: CleanYourTV ya **no es el Home** del TV. Sigue instalado (desactivado) y con sus ajustes (tema Aurora y orden del dock).
+
+---
+
+## 8. Selector de Home: `tools/home.py` (CleanYourTV o Free My TV)
+
+Tipo: funcionalidad. Fecha: 2026-10-24.
+
+### Implementación
+- [`tools/home.py`](../tools/home.py) (nuevo, Python): usa la conexión de `tools/tv.py` (`TV_HOST`, puerto 5555), así que funciona igual en Windows, macOS y Linux.
+  - **`status`:** Home actual, salvapantallas y estado (instalado, activo o desactivado) de CleanYourTV y de Free My TV.
+  - **`cleanyourtv [--input-key-service] [--home-key-service]`:**
+    - Si Free My TV está activo, vuelve el salvapantallas de Google (`dreamx`), o el que el TV tenga por defecto, y **desactiva** `io.freemytv` (sin desinstalar), para que su revisión de arranque no recupere el Home.
+    - Después activa CleanYourTV y lo pone como Home.
+    - Si CleanYourTV no está instalado, llama a `launcher/build-and-install.ps1`/`.sh`, indicando que el lanzador a desactivar es Free My TV si es el Home en ese momento.
+  - **`freemytv [--src] [--update] [--city --lat --lon --region --tmdb-key --no-crypto]`:**
+    - Clona Free My TV junto al repo (o usa `--src`) y escribe su `config.properties` (la clave nunca se imprime).
+    - Lo compila con su `build.sh` (Git Bash en Windows).
+    - Lo instala con `b64push.py` + `pm install -r`, lo reactiva si estaba desactivado y abre sus ajustes.
+    - **El cambio de Home se hace en el TV**, con la clave ADB propia de Free My TV. Así queda su registro de lo que desactiva y funciona su botón «Original».
+- `README.md`: sección «Choosing the home screen», antes de «Restoring your TV».
+- `PROMPT.md`: en «Launcher», el asistente pregunta primero qué Home se quiere y usa `tools/home.py`.
+
+### Alcance del cambio
+- Toca: herramientas y documentación. El launcher no cambia.
+- Fuera de alcance:
+  - El cambio de Home dentro de Free My TV, que es suyo.
+  - Desinstalar cualquiera de los dos.
+
+### Resultado verificado
+- **`status`** en el Caixun: `Home: io.freemytv/.HomeActivity (Free My TV)`, salvapantallas `io.freemytv/io.freemytv.Screensaver`, CleanYourTV «installed, disabled», Free My TV «installed, enabled».
+- **`freemytv --src C:\Users\migue\DEV\free-my-tv`:** recompiló con la configuración existente, transfirió el APK en 28 bloques (`md5 ... MATCH`), `pm install -r` dio `Success`, y detectó `Free My TV is already the home screen; it was updated.`
+- **Tests:** `tests/test_examples.py` en verde, en modo estricto.
+
+### No verificado / atajos de prueba
+- Sin ejecutar en el TV, para no cambiar el Home que el propietario eligió:
+  - `cleanyourtv` con Free My TV activo.
+  - `freemytv` con CleanYourTV como Home.
+  - La rama que instala CleanYourTV desde cero.
+- **Sin probar:** con Free My TV desactivado por `home.py cleanyourtv` y vuelto a activar, su registro interno sigue en modo «free». Volver a elegir Free My TV en el TV debería repetir el cambio, pero no se ha comprobado.
+
+---
+
 ## Historial de Versiones
 
 | Fecha | Versión | Cambios |
