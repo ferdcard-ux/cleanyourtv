@@ -64,6 +64,11 @@ Debloat
   still plays afterwards, and note the undo (`private_dns_mode opportunistic`) in the README.
 
 Launcher
+- Ask me which home screen I want: this repo's launcher (CleanYourTV: Apple TV style dock, no network,
+  built for 1 GB sets) or [Free My TV](https://github.com/simbasjungles/free-my-tv) (trending picks
+  from TMDB, weather, day and night look; needs a free TMDB key, my city and about 100 MB of memory).
+  `tools/home.py` installs either and switches between them; with Free My TV, follow its own steps on
+  the TV and skip the launcher bullets below.
 - Check that the TV accepts APKs before building anything. Some China-market sets answer every
   sideload with `INSTALL_FAILED_VERIFICATION_FAILURE` — `adb install`, `pm install`, a hand-started
   installer and even the manufacturer's own APKs all fail — and others refuse any package that

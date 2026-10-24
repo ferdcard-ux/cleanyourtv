@@ -294,6 +294,32 @@ the install script finds `~/Android/Sdk` and the `java` on your PATH.
 - **Navigation** is deliberate: Up and Down move one row, the top buttons never fall through to tiles and Down from them returns to the dock tile you came from, the last focused app is remembered, and installing or removing an app refreshes the tiles while Home is open.
 - **Artwork**: app banners load at xhdpi or better, so low-density TV UIs do not downsample them before the focus zoom.
 
+## Choosing the home screen
+
+This repo's launcher is one choice. [Free My TV](https://github.com/simbasjungles/free-my-tv) (MIT) is
+another: trending picks from your own apps (TMDB), the weather, a day and night look and a poster
+screensaver, at the cost of network calls and more memory. [`tools/home.py`](tools/home.py) installs
+either one and switches between them:
+
+```bash
+TV_HOST=192.168.1.50 tools/venv/bin/python tools/home.py status
+TV_HOST=192.168.1.50 tools/venv/bin/python tools/home.py cleanyourtv [--input-key-service]
+TV_HOST=192.168.1.50 tools/venv/bin/python tools/home.py freemytv --city Lisbon --lat 38.72 --lon -9.14     --region PT --tmdb-key <your key> --no-crypto
+```
+
+On Windows: `$env:TV_HOST='192.168.1.50'; toolsenv\Scripts\python.exe -I tools\home.py status`.
+
+- **`freemytv`** clones Free My TV next to this repo (or `--src`), writes its `config.properties` (kept
+  out of git there), builds it with its `build.sh` (Git Bash on Windows), installs it and opens its
+  settings. The switch is made on the TV: Free My TV → Home Screen → Free My TV, then allow its own
+  USB debugging key. Free My TV records what it turns off, including CleanYourTV if that was Home, and
+  its **Original** button puts it all back. That button needs port 5555 open (`adb tcpip 5555` again
+  after a restart on TVs that close it).
+- **`cleanyourtv`** turns Free My TV off (still installed, settings kept, so its boot check cannot take
+  Home back), brings back the TV's screensaver and makes CleanYourTV Home: switched on if installed,
+  built and installed with `launcher/build-and-install` otherwise.
+- Neither uninstalls anything: the home screen you leave stays installed, only turned off.
+
 ## Restoring your TV
 
 Before `tools/disable.sh` changes anything it writes down what the TV looked like: for every package
